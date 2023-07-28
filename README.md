@@ -61,3 +61,67 @@
 
 </div>
 
+### 마포구 아파트 조회
+## 기간 : 2023년 01월 ~ 2023년 06월
+json 파일로 저장.
+
+
+```bash
+export SERVICE_KEY=your_personal_key_here
+```
+
+```python
+from PublicDataReader import TransactionPrice
+import PublicDataReader as pdr
+
+# 서비스 키 등록
+service_key = "YOURKEY"
+api = TransactionPrice(service_key)
+
+# 검색할 지역 이름 설정
+sigungu_name = "마포구"
+code = pdr.code_bdong()
+sigungu_code = code.loc[(code['시군구명'].str.contains(sigungu_name)) &
+                        (code['읍면동명'] == ''), '시군구코드'].values[0]
+
+# 특정 기간 동안 해당 지역 아파트 거래 조회
+df = api.get_data(
+    property_type="아파트",
+    trade_type="매매",
+    sigungu_code=sigungu_code,
+    start_year_month="202301",
+    end_year_month="202307",  # 종료 월을 7월로 업데이트
+)
+
+```
+
+
+결과 출력
+
+
+```python
+# 결과 출력
+import pandas as pd
+
+# DataFrame을 CSV 파일로 CP949 인코딩으로 저장
+df.to_csv('apartment_transactions.csv', index=False, encoding='cp949')
+
+# 저장된 CSV 파일을 데이터프레임으로 다시 불러오기 (선택사항)
+loaded_df = pd.read_csv('apartment_transactions.csv', encoding='cp949')
+
+# 불러온 데이터프레임 출력 (선택사항)
+print(loaded_df)
+```
+![image](https://github.com/plintAn/PublicDataReader/assets/124107186/9dc0fa82-37a5-45c8-a7a6-943dee9dbfde)
+
+
+
+
+
+
+
+
+
+
+
+
