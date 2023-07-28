@@ -1,9 +1,13 @@
-# PublicDataReader
+# PublicDataReader를 활용한 아파트 매매 실거래가 분석하기
 
-#PublicDtaReader 라이브러리는 공공 데이터 조회를 위한 오픈소스 파이썬 라이브러리이다. 이를 활용하기 위해서는 회원가입 후 API 활용 신청을 하고 개인 키를 받아 사용하면 된다.
+PublicDtaReader 라이브러리는 공공 데이터 조회를 위한 오픈소스 파이썬 라이브러리이다. 이를 활용하기 위해서는 회원가입 후 API 활용 신청을 하고 개인 키를 받아 사용하면 된다.
+
 
 ## [국토교통부_아파트매매 실거래 상세 자료](https://www.data.go.kr/data/15057511/openapi.do)
  자료소개: 부동산 거래신고에 관한 법률에 따라 신고된 주택의 실거래 자료를 제공
+
+## 1. 패키지 설치와 임포트
+Python에서는 PublicDataReader 패키지를 사용해 국토교통부_아파트매매 실거래자료 API를 쉽게 이용할 수 있습니다. 만약 아직 설치하지 않으셨다면, 아래의 pip 명령어로 설치가 가능합니다.
 
 <div align="center">
 
@@ -61,58 +65,115 @@
 
 </div>
 
-### 마포구 아파트 조회
-## 기간 : 2023년 01월 ~ 2023년 06월
-json 파일로 저장.
-
-
-```bash
-export SERVICE_KEY=your_personal_key_here
+```python
+pip install PublicDataReader
 ```
+설치 완료 후 임포트
 
 ```python
+import matplotlib.pyplot as plt
+import seaborn as sns
 from PublicDataReader import TransactionPrice
 import PublicDataReader as pdr
+import pandas as pd
+```
 
-# 서비스 키 등록
-service_key = "YOURKEY"
+## 2. 데이터 가져오기
+API를 사용하기 위해서는 서비스키가 필요합니다. 서비스키는 공공데이터포털에서 발급받을 수 있습니다.
+
+### 서비스키를 입력
+```python
+# 서비스키를 입력합니다.
+service_key = "your"
 api = TransactionPrice(service_key)
+```
+이번 분석에서는 "성동구"에서 2023년 1월부터 2023년 6월까지의 아파트 매매 실거래가를 조회하겠습니다.
 
-# 검색할 지역 이름 설정
+### 마포구 아파트 조회
+## 기간 : 2023년 01월 ~ 2023년 06월
+
+```python
+# 분석 대상 지역 설정
 sigungu_name = "마포구"
 code = pdr.code_bdong()
 sigungu_code = code.loc[(code['시군구명'].str.contains(sigungu_name)) &
                         (code['읍면동명'] == ''), '시군구코드'].values[0]
 
-# 특정 기간 동안 해당 지역 아파트 거래 조회
+# 지정한 기간 (2023년 1월 ~ 6월) 동안의 아파트 거래 데이터 조회
 df = api.get_data(
     property_type="아파트",
     trade_type="매매",
     sigungu_code=sigungu_code,
     start_year_month="202301",
-    end_year_month="202307",  # 종료 월을 7월로 업데이트
+    end_year_month="202306",  # 6월까지 업데이트
 )
 
 ```
 
+### 거래년월 컬럼 생성
+```python
+# '년'과 '월' 컬럼을 이용하여 '거래년월' 컬럼 생성
+df['거래년월'] = pd.to_datetime(df['년'] * 10000 + df['월'] * 100 + 1, format='%Y%m%d')
+```
+
+
+## 3. 데이터 처리 및 분석
+이제 데이터를 처리하고 분석해보겠습니다. 실거래가 데이터는 어떤 형태로 들어왔는지 확인해보겠습니다.
+
+```python
+print(df.head())
+```
+![image](https://github.com/plintAn/PublicDataReader/assets/124107186/4c70c1fe-8ac7-4783-917e-7bb7d113c3aa)
+
+
+결과는 다음과 같습니다
+
+## 4. 데이터 시각화
+성동구 내의 아파트 매매 실거래가의 트렌드를 확인하기 위해 월별 거래금액의 평균을 계산하고 이를 시각화
+
+```python
+# 시각화 설정
+sns.set(style="darkgrid", font="Malgun Gothic", font_scale=1.2)
+```
 
 결과 출력
 
-
 ```python
-# 결과 출력
-import pandas as pd
-
-# DataFrame을 CSV 파일로 CP949 인코딩으로 저장
-df.to_csv('apartment_transactions.csv', index=False, encoding='cp949')
-
-# 저장된 CSV 파일을 데이터프레임으로 다시 불러오기 (선택사항)
-loaded_df = pd.read_csv('apartment_transactions.csv', encoding='cp949')
-
-# 불러온 데이터프레임 출력 (선택사항)
-print(loaded_df)
+# 시각화: 월별 평균 거래금액 추이
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=df, x='거래년월', y='거래금액', marker='o')
+plt.title('마포구 아파트 월별 평균 거래금액', fontsize=16)
+plt.xlabel('거래년월', fontsize=14)
+plt.ylabel('평균 거래금액(만원)', fontsize=14)
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+plt.show()
 ```
-![image](https://github.com/plintAn/PublicDataReader/assets/124107186/9dc0fa82-37a5-45c8-a7a6-943dee9dbfde)
+해당 코드는 'PublicDataReader' 라이브러리를 이용하여 서울시 아파트 거래 데이터를 조회하고, 
+마포구의 2023년 1월부터 6월까지의 아파트 매매 거래 데이터를 분석
+
+![image](https://github.com/plintAn/PublicDataReader/assets/124107186/7e0501c1-bfc7-4f03-9a99-b8ee2bf8c302)
+
+다음 그래프를 통해 알 수 있는 점
+
+시계열 변동: 그래프 상에서 x축은 시간을 나타내고 있으므로 시계열 데이터로서 변동을 파악할 수 있다.
+월별 거래금액 추이: 선의 기울기와 변동을 통해 월별로 아파트 거래금액의 평균이 어떻게 변화하고 있는지 파악할 수 있다.
+
+상승 추세: 그래프 상에서 선이 점차 상승하는 경향을 보이면, 해당 기간 동안 아파트 거래금액이 상승하고 있다는 것을 의미한다.
+
+변동성: 그래프 상에서 선이 교차하거나 진동하는 구간이 있으면, 해당 기간 동안 아파트 거래금액의 변동이 크다는 것을 의미한다.
+
+# 결론 및 시사점
+
+2023년 상반기 마포구 아파트 거래는 비슷한 추이를 보이며, 월별로 큰 변동이 없는 것으로 보여진다.
+2023년 상반기 마포구 아파트의 평균 거래금액은 약간의 상승 추세를 보이고 있다.
+주기적으로 발생하는 주택 거래 변동을 확인하여 해당 기간 동안의 마포구 아파트 시장 상태를 파악한다.
+
+더 많은 분석과 시각화를 통해 부동산 시장의 동향과 패턴을 파악할 수 있었으며, 이를 통해 투자 및 거래 결정에 도움이 될 수 있을거 같습니다.
+추가적인 분석을 통해 더 깊은 인사이트를 얻을 수 있습니다.
+
+
+
 
 
 
